@@ -1,7 +1,8 @@
-from typing import List, Literal
-from typing_extensions import TypedDict
-from pydantic import BaseModel, Field
+from typing import Literal
+
 from langchain_core.documents import Document
+from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
 
 
 class RouteDecision(BaseModel):
@@ -19,12 +20,12 @@ class EvidenceGrade(BaseModel):
 class AgentState(TypedDict):
     question: str
     current_query: str
-    kb_docs: List[Document]
+    kb_docs: list[Document]
     web_results: str
     kb_grade: str
     web_grade: str
     answer: str
     source_used: str
     retry_count: int
-    trace: List[str]
-    citations: List[dict]
+    trace: list[str]
+    citations: list[dict]

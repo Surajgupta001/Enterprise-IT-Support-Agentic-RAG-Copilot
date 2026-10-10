@@ -1,15 +1,29 @@
-langgraph
-langchain
-langchain-core
-langchain-groq
-langchain-huggingface
-langchain-pinecone
-langchain-community
-langchain-text-splitters
-langchain-tavily
-pinecone
-sentence-transformers
-beautifulsoup4
-python-dotenv
-fastapi
-uvicorn[standard]
+# Core API
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7,<3
+pydantic-settings>=2.3,<3
+python-dotenv>=1.0,<2
+python-multipart>=0.0.18
+jinja2>=3.1,<4
+
+# LangChain / LangGraph Agentic RAG (free stack: Groq LLM + local HF embeddings)
+langchain>=0.3
+langchain-core>=0.3
+langchain-groq>=0.2
+langchain-huggingface>=0.1
+sentence-transformers>=2.7
+langchain-pinecone>=0.2
+langchain-community>=0.3
+langchain-text-splitters>=0.3
+langchain-tavily>=0.2
+tavily-python>=0.5
+langgraph>=0.2
+
+# Vector DB
+pinecone>=5.0
+
+# Document loaders
+pypdf>=4.0
+python-docx>=1.1
+beautifulsoup4>=4.12

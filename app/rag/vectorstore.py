@@ -1,7 +1,10 @@
+import os
 import time
-from pinecone import Pinecone, ServerlessSpec
-from langchain_openai import OpenAIEmbeddings
+
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
+from pinecone import Pinecone, ServerlessSpec
+
 from app.core.config import get_settings
 
 settings = get_settings()
@@ -12,10 +15,11 @@ _vectorstore = None
 
 
 EMBEDDING_DIMENSIONS = {
+    "sentence-transformers/all-minilm-l6-v2": 384,
+    "all-minilm-l6-v2": 384,
     "text-embedding-3-small": 1536,
     "text-embedding-3-large": 3072,
     "text-embedding-ada-002": 1536,
-    "all-minilm-l6-v2": 384,
 }
 
 
@@ -45,22 +49,47 @@ def get_embedding_dimension(model_name: str | None = None) -> int:
 def get_embeddings():
     global _embeddings
     if _embeddings is None:
-        if not settings.openai_api_key:
-            raise RuntimeError("OPENAI_API_KEY is missing")
-        _embeddings = OpenAIEmbeddings(
-            model=settings.embedding_model,
-            api_key=settings.openai_api_key,
+        # Free local embeddings — no API key / no per-token cost.
+        # Runs on CPU via sentence-transformers.
+        _embeddings = HuggingFaceEmbeddings(
+            model_name=settings.embedding_model,
         )
     return _embeddings
+
+
+def _list_index_names(pc) -> list[str]:
+    """Compatible with pinecone>=5 (objects with .name) and older dict-style returns."""
+    names: list[str] = []
+    for x in pc.list_indexes():
+        if isinstance(x, dict):
+            names.append(x.get("name", ""))
+        else:
+            names.append(getattr(x, "name", str(x)))
+    return names
+
+
+def _is_index_ready(pc, index_name: str) -> bool:
+    info = pc.describe_index(index_name)
+    status = getattr(info, "status", None)
+    if isinstance(status, dict):
+        return bool(status.get("ready"))
+    if status is not None:
+        return bool(getattr(status, "ready", False))
+    if isinstance(info, dict):
+        return bool(info.get("status", {}).get("ready"))
+    return False
 
 
 def ensure_index():
     if not settings.pinecone_api_key:
         raise RuntimeError("PINECONE_API_KEY is missing")
 
+    # Ensure env var is set for libraries that auto-detect it
+    os.environ.setdefault("PINECONE_API_KEY", settings.pinecone_api_key)
+
     desired_dimension = get_embedding_dimension()
     pc = Pinecone(api_key=settings.pinecone_api_key)
-    names = [x["name"] for x in pc.list_indexes()]
+    names = _list_index_names(pc)
 
     if settings.pinecone_index_name in names:
         index_info = pc.describe_index(settings.pinecone_index_name)
@@ -70,19 +99,17 @@ def ensure_index():
 
         if current_dimension is not None and current_dimension != desired_dimension:
             pc.delete_index(name=settings.pinecone_index_name)
-            while settings.pinecone_index_name in [
-                x["name"] for x in pc.list_indexes()
-            ]:
+            while settings.pinecone_index_name in _list_index_names(pc):
                 time.sleep(1)
 
-    if settings.pinecone_index_name not in [x["name"] for x in pc.list_indexes()]:
+    if settings.pinecone_index_name not in _list_index_names(pc):
         pc.create_index(
             name=settings.pinecone_index_name,
             dimension=desired_dimension,
             metric="cosine",
             spec=ServerlessSpec(cloud="aws", region="us-east-1"),
         )
-        while not pc.describe_index(settings.pinecone_index_name).status["ready"]:
+        while not _is_index_ready(pc, settings.pinecone_index_name):
             time.sleep(1)
 
     return pc.Index(settings.pinecone_index_name)

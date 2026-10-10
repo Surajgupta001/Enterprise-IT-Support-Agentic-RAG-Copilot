@@ -1,5 +1,6 @@
 from functools import lru_cache
 from pathlib import Path
+
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -8,12 +9,17 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 class Settings(BaseSettings):
     app_name: str = "Enterprise IT Support Agentic RAG Copilot"
     app_env: str = "development"
-    openai_api_key: str = ""
+    # Free stack: Groq LLM (has free tier) + local HF embeddings (no API cost)
+    groq_api_key: str = ""
+    groq_model: str = "openai/gpt-oss-20b"
+    groq_fallback_model: str = "llama-3.1-8b-instant"
     tavily_api_key: str = ""
     pinecone_api_key: str = ""
     pinecone_index_name: str = "fde-it-support-rag"
     pinecone_namespace: str = "company-it-kb"
-    embedding_model: str = "text-embedding-3-small"
+    embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    # Legacy (optional, only if you switch back to paid OpenAI)
+    openai_api_key: str = ""
     openai_model: str = "gpt-4o-mini"
     top_k: int = 4
     max_retries: int = 1

@@ -1,12 +1,15 @@
 import json
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from pathlib import Path
+
 from app.core.config import get_settings
 
 settings = get_settings()
 
 
 def init_db() -> None:
+    Path(settings.audit_db_path).parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(settings.audit_db_path)
     con.execute(
         """CREATE TABLE IF NOT EXISTS query_audit (
@@ -26,7 +29,7 @@ def write_audit(question: str, source_used: str, trace: list[str]) -> None:
     con.execute(
         "INSERT INTO query_audit(created_at, question, source_used, trace_json) VALUES (?, ?, ?, ?)",
         (
-            datetime.now(timezone.utc).isoformat(),
+            datetime.now(UTC).isoformat(),
             question,
             source_used,
             json.dumps(trace),

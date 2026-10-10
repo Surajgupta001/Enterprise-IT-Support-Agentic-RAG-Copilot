@@ -1,11 +1,13 @@
 from pathlib import Path
-from fastapi import APIRouter, UploadFile, File, HTTPException, Header
+
+from fastapi import APIRouter, File, Header, HTTPException, UploadFile
 from pydantic import BaseModel, Field
+
 from app.core.config import get_settings
-from app.rag.workflow import ask
 from app.rag.vectorstore import add_documents
-from app.services.ingestion import load_file, chunk_documents, SUPPORTED
+from app.rag.workflow import ask
 from app.services.audit import write_audit
+from app.services.ingestion import SUPPORTED, chunk_documents, load_file
 
 router = APIRouter(prefix="/api")
 settings = get_settings()
@@ -51,8 +53,13 @@ async def ingest(file: UploadFile = File(...), x_admin_key: str = Header(default
     upload_dir.mkdir(parents=True, exist_ok=True)
     dest = upload_dir / Path(file.filename).name
     dest.write_bytes(await file.read())
-    docs = load_file(dest)
+    try:
+        docs = load_file(dest)
+    except (ValueError, FileNotFoundError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     chunks = chunk_documents(docs)
+    if not chunks:
+        raise HTTPException(status_code=400, detail="No indexable text found in file")
     ids = add_documents(chunks)
     return {
         "message": "Document indexed",
