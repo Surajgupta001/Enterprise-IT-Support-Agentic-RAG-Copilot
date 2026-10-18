@@ -216,3 +216,26 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# ===== Project-specific =====
+# Runtime SQLite audit database
+data/audit.db
+*.db
+
+# User uploads (runtime data)
+uploads/
+!uploads/.gitkeep
+
+# UV lock file (large, platform-specific for this app)
+uv.lock
+
+# Jupyter notebook scratch
+Agentic-Rag/
+
+# Local Python version
+.python-version
+
+# Scaffold / dev scratch scripts
+create_project.py
+steps.md
+tempCodeRunnerFile.py

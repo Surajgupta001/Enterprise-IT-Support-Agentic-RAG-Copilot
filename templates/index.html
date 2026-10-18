@@ -4,48 +4,58 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description"
+        content="Enterprise IT Support Copilot powered by Agentic RAG — ask questions about company IT policies, VPN, passwords, and more." />
     <title>{{ app_name }}</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>" />
     <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 
 <body>
+    <!-- Mobile sidebar overlay -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <div class="shell">
-        <aside class="sidebar">
-            <div>
+        <!-- ─── Sidebar ─── -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
                 <div class="brand-badge">FDE Project</div>
                 <h1>IT Support<br />Agentic RAG</h1>
-                <p class="muted">Private company knowledge first. External web only when evidence is weak.</p>
+                <p class="sidebar-desc">Private company knowledge first. External web only when evidence is weak.</p>
             </div>
 
             <div class="workflow-card">
                 <h3>LangGraph Workflow</h3>
-                <div class="flow-step">1. Route question</div>
-                <div class="flow-step">2. Retrieve private KB</div>
-                <div class="flow-step">3. Grade evidence</div>
-                <div class="flow-step">4. Web fallback if weak</div>
-                <div class="flow-step">5. Rewrite & retry</div>
-                <div class="flow-step">6. Grounded answer</div>
+                <div class="flow-step"><span class="step-num">01</span> Route question</div>
+                <div class="flow-step"><span class="step-num">02</span> Retrieve private KB</div>
+                <div class="flow-step"><span class="step-num">03</span> Grade evidence</div>
+                <div class="flow-step"><span class="step-num">04</span> Web fallback if weak</div>
+                <div class="flow-step"><span class="step-num">05</span> Rewrite &amp; retry</div>
+                <div class="flow-step"><span class="step-num">06</span> Grounded answer</div>
             </div>
 
-            <button id="openUpload" class="secondary-btn">+ Add Company Document</button>
+            <button id="openUpload" class="secondary-btn">Add Company Document</button>
         </aside>
 
+        <!-- ─── Main ─── -->
         <main class="main">
             <header class="topbar">
-                <div>
+                <div class="topbar-left">
+                    <button class="hamburger" id="hamburger" aria-label="Toggle sidebar">☰</button>
                     <span class="status-dot"></span>
-                    <span>Enterprise Knowledge Copilot</span>
+                    <span class="topbar-title">Enterprise Knowledge Copilot</span>
                 </div>
-                <span class="pill">Agentic RAG</span>
+                <span class="pill">⚡ Agentic RAG</span>
             </header>
 
             <section id="chat" class="chat-area">
                 <div class="message assistant">
                     <div class="avatar">AI</div>
                     <div class="bubble">
-                        <strong>How can I help with IT support?</strong>
-                        <p>Try: “How do I connect to the company VPN?” or ask a question that may require current
-                            external vendor information.</p>
+                        <span class="welcome-title">How can I help with IT support?</span>
+                        <p>Ask about company VPN, password resets, MFA setup, laptop provisioning, or any IT policy.
+                            I'll search the private knowledge base first and fall back to the web only if needed.</p>
                     </div>
                 </div>
             </section>
@@ -54,20 +64,22 @@
                 <div class="examples">
                     <button class="example">How do I connect to the company VPN?</button>
                     <button class="example">What is our password reset policy?</button>
-                    <button class="example">What is the latest Microsoft Teams outage guidance?</button>
+                    <button class="example">Latest Microsoft Teams outage guidance?</button>
                 </div>
                 <form id="chatForm" class="composer">
-                    <textarea id="question" rows="2" placeholder="Ask an IT support question..." required></textarea>
-                    <button type="submit" class="send-btn">Ask Agent</button>
+                    <textarea id="question" rows="1" placeholder="Ask an IT support question…" required></textarea>
+                    <button type="submit" class="send-btn" id="sendBtn">Ask Agent</button>
                 </form>
+                <div class="kbd-hint"><kbd>Enter</kbd> to send · <kbd>Shift+Enter</kbd> for new line</div>
             </section>
         </main>
 
+        <!-- ─── Trace Panel ─── -->
         <aside class="trace-panel">
             <h2>Agent Trace</h2>
-            <p class="muted">Watch LangGraph decisions while the request runs.</p>
+            <p class="muted">Watch LangGraph decisions in real time.</p>
             <div id="trace" class="trace-list">
-                <div class="empty">No request yet.</div>
+                <div class="empty">No request yet — ask a question to see the workflow.</div>
             </div>
             <div class="source-box">
                 <span>Final Source</span>
@@ -76,13 +88,15 @@
         </aside>
     </div>
 
+    <!-- ─── Upload Modal ─── -->
     <div id="uploadModal" class="modal hidden">
         <div class="modal-card">
             <div class="modal-head">
-                <h2>Ingest Company Document</h2><button id="closeUpload">×</button>
+                <h2>Ingest Company Document</h2>
+                <button id="closeUpload" aria-label="Close modal">×</button>
             </div>
-            <p class="muted">Upload PDF, TXT, Markdown, or DOCX. The document is chunked, embedded, and indexed into
-                Pinecone.</p>
+            <p class="modal-desc">Upload PDF, TXT, Markdown, or DOCX. The document is chunked, embedded, and indexed
+                into Pinecone for private knowledge retrieval.</p>
             <input id="adminKey" type="password" placeholder="Admin API key" />
             <input id="fileInput" type="file" accept=".pdf,.txt,.md,.docx" />
             <button id="uploadBtn" class="send-btn full">Index Document</button>
