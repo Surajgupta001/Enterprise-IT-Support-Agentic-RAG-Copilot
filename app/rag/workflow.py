@@ -2,11 +2,14 @@ import json
 import logging
 import os
 import re
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
+from groq import APIError
+from langchain_core.exceptions import LangChainException
 from langchain_groq import ChatGroq
 from langchain_tavily import TavilySearch
 from langgraph.graph import END, START, StateGraph
+from pydantic import SecretStr
 
 from app.core.config import get_settings
 from app.rag.state import AgentState, EvidenceGrade, RouteDecision
@@ -20,6 +23,7 @@ _web_search = None
 
 # Keep prompts small enough for Groq free-tier context limits.
 MAX_CONTEXT_CHARS = 12000
+_LLM_ERRORS = (APIError, LangChainException, ValueError, TypeError, RuntimeError)
 
 
 def llm(model: str | None = None):
@@ -33,7 +37,7 @@ def llm(model: str | None = None):
         _llms[name] = ChatGroq(
             model=name,
             temperature=0,
-            api_key=settings.groq_api_key,
+            api_key=SecretStr(settings.groq_api_key),
         )
     return _llms[name]
 
@@ -54,7 +58,7 @@ def _invoke_with_fallback(make_runnable, payload: str):
     primary = settings.groq_model
     try:
         return make_runnable(llm(primary)).invoke(payload)
-    except Exception as exc:
+    except _LLM_ERRORS as exc:
         fallback = settings.groq_fallback_model
         if not fallback or fallback == primary or not _is_model_not_found(exc):
             raise
@@ -66,7 +70,7 @@ def _invoke_with_fallback(make_runnable, payload: str):
         )
         try:
             return make_runnable(llm(fallback)).invoke(payload)
-        except Exception as fallback_exc:
+        except _LLM_ERRORS as fallback_exc:
             raise RuntimeError(
                 f"Groq models {primary!r} and {fallback!r} are both unavailable: {fallback_exc}. "
                 "Set GROQ_MODEL in .env to a model listed at https://console.groq.com/docs/models "
@@ -95,7 +99,8 @@ def _manual_schema_parse(schema, exc: Exception):
     for c in candidates:
         try:
             return schema.model_validate(json.loads(c))
-        except Exception:
+        except (json.JSONDecodeError, TypeError, ValueError) as parse_exc:
+            logger.debug("Could not parse structured-output candidate: %s", parse_exc)
             continue
     raise ValueError(f"Could not parse structured output from: {text[:500]}")
 
@@ -118,7 +123,7 @@ def _structured_invoke(schema, payload: str):
                 return model.with_structured_output(schema, method=method).invoke(
                     payload
                 )
-            except Exception as exc:
+            except _LLM_ERRORS as exc:
                 errors.append(exc)
                 if _is_model_not_found(exc):
                     break  # dead model id → try next model
@@ -129,11 +134,11 @@ def _structured_invoke(schema, payload: str):
                     continue  # same model, json_mode next
                 try:
                     return _manual_schema_parse(schema, exc)
-                except Exception:
+                except (ValueError, TypeError):
                     continue  # try next method/model
     try:
         return _manual_schema_parse(schema, errors[-1])
-    except Exception:
+    except (ValueError, TypeError):
         pass
     raise RuntimeError(
         f"Structured output failed on {models}: {errors[-1]}. "
@@ -208,14 +213,14 @@ def _kb_context(state: AgentState) -> str:
 
 def route_question(state: AgentState):
     router = structured_llm(RouteDecision)
-    decision = router.invoke(f"""
+    decision = cast(RouteDecision, router.invoke(f"""
 You route messages for an enterprise IT support assistant.
 Use kb for questions about company IT policies, VPN, password reset, MFA, laptop setup,
 software access, security, email, devices, troubleshooting, or technology support.
 Use direct only for greetings, thanks, or casual chat that needs no company knowledge.
 Question: {state["question"]}
 Return valid JSON like {{"route":"kb"}}.
-""")
+"""))
     return {
         "source_used": decision.route,
         "trace": add_trace(state, f"Router → {decision.route.upper()}"),
@@ -247,13 +252,13 @@ def grade_kb(state: AgentState):
             "trace": add_trace(state, "KB evidence grade → WEAK (no chunks)"),
         }
     grader = structured_llm(EvidenceGrade)
-    grade = grader.invoke(f"""
+    grade = cast(EvidenceGrade, grader.invoke(f"""
 You grade evidence for an enterprise IT support assistant.
 Question: {state["question"]}
 Private company KB evidence:\n{_kb_context(state)}
 Return good only if the evidence is sufficient to answer confidently and specifically.
 Otherwise return weak. JSON: {{"grade":"good"}} or {{"grade":"weak"}}.
-""")
+"""))
     return {
         "kb_grade": grade.grade,
         "trace": add_trace(state, f"KB evidence grade → {grade.grade.upper()}"),
@@ -312,12 +317,12 @@ def grade_web(state: AgentState):
             "trace": add_trace(state, "Web evidence grade → WEAK (no results)"),
         }
     grader = structured_llm(EvidenceGrade)
-    grade = grader.invoke(f"""
+    grade = cast(EvidenceGrade, grader.invoke(f"""
 Question: {state["question"]}
 Web evidence:\n{state["web_results"][:MAX_CONTEXT_CHARS]}
 Return good if the evidence is sufficient and directly relevant; otherwise weak.
 Return valid JSON like {{"grade":"good"}}.
-""")
+"""))
     return {
         "web_grade": grade.grade,
         "trace": add_trace(state, f"Web evidence grade → {grade.grade.upper()}"),

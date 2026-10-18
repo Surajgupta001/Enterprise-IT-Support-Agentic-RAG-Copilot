@@ -11,6 +11,7 @@ from app.services.ingestion import SUPPORTED, chunk_documents, load_file
 
 router = APIRouter(prefix="/api")
 settings = get_settings()
+INGEST_FILE = File(...)
 
 
 class ChatRequest(BaseModel):
@@ -41,7 +42,7 @@ def chat(payload: ChatRequest):
 
 
 @router.post("/ingest")
-async def ingest(file: UploadFile = File(...), x_admin_key: str = Header(default="")):
+async def ingest(file: UploadFile = INGEST_FILE, x_admin_key: str = Header(default="")):
     if x_admin_key != settings.admin_api_key:
         raise HTTPException(status_code=401, detail="Invalid admin key")
     suffix = Path(file.filename or "").suffix.lower()
@@ -51,7 +52,7 @@ async def ingest(file: UploadFile = File(...), x_admin_key: str = Header(default
         )
     upload_dir = Path(settings.upload_dir)
     upload_dir.mkdir(parents=True, exist_ok=True)
-    dest = upload_dir / Path(file.filename).name
+    dest = upload_dir / Path(file.filename or "").name
     dest.write_bytes(await file.read())
     try:
         docs = load_file(dest)
