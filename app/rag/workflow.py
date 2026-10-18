@@ -88,7 +88,7 @@ def _manual_schema_parse(schema, exc: Exception):
     (see failed_generation in the 400 error) instead of calling the tool."""
     text = str(exc)
     candidates: list[str] = []
-    m = re.search(r"failed_generation['\"]\s*:\s*['\"](\{.*?\})['\"]", text, re.S)
+    m = re.search(r"failed_generation['\"]\s*:\s*['\"](\{.*?\})['\"]", text, re.DOTALL)
     if m:
         candidates.append(m.group(1))
     candidates.extend(m.group(0) for m in re.finditer(r"\{[^{}]+\}", text))
