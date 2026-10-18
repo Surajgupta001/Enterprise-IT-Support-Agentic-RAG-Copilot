@@ -2,6 +2,8 @@
 
 An **Agentic Retrieval-Augmented Generation (RAG)** copilot that answers employee IT-support questions from a **trusted private company knowledge base first**, grades the retrieved evidence, falls back to **web search** only when needed, rewrites weak queries and retries — and always returns its answer with **citations and a full decision trace**.
 
+> 🚀 **Live Demo:** [Open Enterprise IT Support Copilot](https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com) · [API Health](https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com/api/health) · [API Docs](https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com/docs)
+
 > Built as an **FDE (Forward Deployed Engineer)** project for the fictional customer **NovaRetail** (3,000 employees). Full scenario: [`docs/FDE_Agentic_RAG_Problem_Statement.pdf`](docs/FDE_Agentic_RAG_Problem_Statement.pdf)
 
 ---
@@ -27,14 +29,15 @@ An **Agentic Retrieval-Augmented Generation (RAG)** copilot that answers employe
 
 ## 🎯 Overview
 
-|                       |                                                                                                                          |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| **Project**           | Enterprise IT Support Agentic RAG Copilot                                                                                |
-| **Customer scenario** | NovaRetail (fictional), 3,000 employees, internal IT support                                                             |
-| **Problem**           | Repetitive IT tickets even though answers already exist in the company KB                                                |
-| **Solution**          | An agentic RAG pipeline: route → retrieve → grade → (web fallback) → rewrite/retry → grounded answer + citations + trace |
-| **Stack**             | FastAPI + LangGraph + Groq LLM + Pinecone + HuggingFace embeddings + Tavily + SQLite + HTML/CSS/JS UI                    |
-| **Cost profile**      | **Free-tier friendly** — Groq (free tier), local CPU embeddings (no API cost), Pinecone/Tavily free tiers                |
+|                       |                                                                                                                                            |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Project**           | Enterprise IT Support Agentic RAG Copilot                                                                                                  |
+| **Live deployment**   | [https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com](https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com) |
+| **Customer scenario** | NovaRetail (fictional), 3,000 employees, internal IT support                                                                               |
+| **Problem**           | Repetitive IT tickets even though answers already exist in the company KB                                                                  |
+| **Solution**          | An agentic RAG pipeline: route → retrieve → grade → (web fallback) → rewrite/retry → grounded answer + citations + trace                   |
+| **Stack**             | FastAPI + LangGraph + Groq LLM + Pinecone + HuggingFace embeddings + Tavily + SQLite + HTML/CSS/JS UI                                      |
+| **Cost profile**      | **Free-tier friendly** — Groq (free tier), local CPU embeddings (no API cost), Pinecone/Tavily free tiers                                  |
 
 ---
 
@@ -267,6 +270,16 @@ Enterprise-IT-Support-Agentic-RAG-Copilot/
 
 ## 🚀 Getting Started
 
+### Try the Live Deployment
+
+- **Chat UI:** [https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com](https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com)
+- **Health check:** [https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com/api/health](https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com/api/health)
+- **API documentation:** [https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com/docs](https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com/docs) _(if Swagger docs are enabled in the deployed environment)_
+
+The live service depends on its configured environment variables and external services (Groq, Pinecone, and Tavily). If the app is sleeping or the health check fails, check the Render service status and logs.
+
+### Run Locally
+
 ### Prerequisites
 
 - Python **3.12+**
@@ -323,6 +336,11 @@ python run.py
 curl -X POST http://127.0.0.1:8080/api/chat \
   -H "Content-Type: application/json" \
   -d '{"question": "How do I connect to the company VPN from home?"}'
+
+# Production example
+curl -X POST https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"question": "How do I connect to the company VPN from home?"}'
 ```
 
 **Example response:**
@@ -345,6 +363,14 @@ curl -X POST http://127.0.0.1:8080/api/chat \
 ```
 
 ## 🔌 API Reference
+
+**Production base URL:** [https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com](https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com)
+
+- Health: `GET https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com/api/health`
+- Chat: `POST https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com/api/chat`
+- Ingest: `POST https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com/api/ingest` _(requires the `x-admin-key` header)_
+
+Use the production URL for deployed requests and `http://127.0.0.1:8080` for local development. Do not expose your admin key in public examples or client-side code.
 
 | Method | Endpoint      | Auth                 | Description                                          |
 | ------ | ------------- | -------------------- | ---------------------------------------------------- |
@@ -450,3 +476,5 @@ docker run -d -p 8080:8080 --env-file .env \
 ---
 
 _Built as a Forward Deployed Engineer (FDE) project — from customer problem to deployable product: understand the workflow → connect company knowledge → build agentic RAG → expose APIs → build the UI → test → deploy → observe → improve._
+
+🌐 **Live application:** [https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com](https://enterprise-it-support-agentic-rag-copilot-nuub.onrender.com)
